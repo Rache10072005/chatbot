@@ -6,18 +6,19 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 from langchain_cohere import ChatCohere
-from src.prompt import *
+from src.prompt import system_prompt
 import os
 
 
 app = Flask(__name__)
 
 
+# Load environment variables
 load_dotenv()
 
 
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
-COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 
 os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
@@ -25,14 +26,15 @@ os.environ["COHERE_API_KEY"] = COHERE_API_KEY
 
 
 
+# Global variables
 index_name = "medical-chatbot"
-
 
 docsearch = None
 rag_chain = None
 
 
 
+# Cohere model
 chatModel = ChatCohere(
     model="command-r-plus-08-2024",
     temperature=0.4
@@ -92,7 +94,7 @@ def load_chatbot():
         )
 
 
-        print("Chatbot Ready")
+        print("Chatbot loaded successfully")
 
 
     return rag_chain
@@ -110,27 +112,30 @@ def index():
 
 
 
-
 @app.route("/get", methods=["POST"])
 def chat():
 
     try:
 
-        print("CHAT REQUEST RECEIVED")
+        print("CHAT REQUEST STARTED")
 
 
         msg = request.form.get("msg")
 
 
-        print("USER:", msg)
+        print("USER MESSAGE:", msg)
 
 
         if not msg:
+
             return "Please enter a message"
+
 
 
         chatbot = load_chatbot()
 
+
+        print("Running chatbot...")
 
 
         response = chatbot.invoke(
@@ -140,25 +145,29 @@ def chat():
         )
 
 
+        print("RAW RESPONSE:", response)
+
+
         answer = response.get(
             "answer",
-            "Sorry, I could not find an answer."
+            "Sorry, no answer found"
         )
 
 
-        print("BOT:", answer)
+        print("BOT ANSWER:", answer)
 
 
-        return answer
+        return str(answer)
 
 
 
     except Exception as e:
 
+
         print("ERROR:", e)
 
-        return "Something went wrong. Check server logs."
 
+        return "Server Error: " + str(e), 500
 
 
 
