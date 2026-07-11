@@ -15,18 +15,22 @@ app = Flask(__name__)
 
 load_dotenv()
 
-PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
-COHERE_API_KEY = os.environ.get('COHERE_API_KEY')
+
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
+
 
 os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
 os.environ["COHERE_API_KEY"] = COHERE_API_KEY
 
 
+
 index_name = "medical-chatbot"
 
+
 docsearch = None
-retriever = None
 rag_chain = None
+
 
 
 chatModel = ChatCohere(
@@ -35,12 +39,14 @@ chatModel = ChatCohere(
 )
 
 
+
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system_prompt),
-        ("human", "{input}"),
+        ("human", "{input}")
     ]
 )
+
 
 
 question_answer_chain = create_stuff_documents_chain(
@@ -49,16 +55,22 @@ question_answer_chain = create_stuff_documents_chain(
 )
 
 
+
+
 def load_chatbot():
-    global docsearch, retriever, rag_chain
 
-    if docsearch is None:
+    global docsearch, rag_chain
 
-        print("Loading HuggingFace embeddings...")
+
+    if rag_chain is None:
+
+        print("Loading embeddings...")
 
         embeddings = download_hugging_face_embeddings()
 
+
         print("Connecting Pinecone...")
+
 
         docsearch = PineconeVectorStore.from_existing_index(
             index_name=index_name,
@@ -68,7 +80,9 @@ def load_chatbot():
 
         retriever = docsearch.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 3}
+            search_kwargs={
+                "k": 3
+            }
         )
 
 
@@ -77,46 +91,80 @@ def load_chatbot():
             question_answer_chain
         )
 
-        print("Chatbot loaded successfully")
+
+        print("Chatbot Ready")
 
 
     return rag_chain
 
 
 
+
+
 @app.route("/")
 def index():
-    return render_template('chat.html')
+
+    return render_template("chat.html")
 
 
 
-@app.route("/get", methods=["GET", "POST"])
+
+
+
+@app.route("/get", methods=["POST"])
 def chat():
 
-    msg = request.form["msg"]
+    try:
 
-    print("Question:", msg)
-
-
-    chatbot = load_chatbot()
+        print("CHAT REQUEST RECEIVED")
 
 
-    response = chatbot.invoke(
-        {
-            "input": msg
-        }
-    )
+        msg = request.form.get("msg")
 
 
-    print("Response:", response["answer"])
+        print("USER:", msg)
 
 
-    return str(response["answer"])
+        if not msg:
+            return "Please enter a message"
+
+
+        chatbot = load_chatbot()
 
 
 
+        response = chatbot.invoke(
+            {
+                "input": msg
+            }
+        )
 
-if __name__ == '__main__':
+
+        answer = response.get(
+            "answer",
+            "Sorry, I could not find an answer."
+        )
+
+
+        print("BOT:", answer)
+
+
+        return answer
+
+
+
+    except Exception as e:
+
+        print("ERROR:", e)
+
+        return "Something went wrong. Check server logs."
+
+
+
+
+
+
+if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
