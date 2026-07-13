@@ -42,9 +42,14 @@ def text_split(extracted_data):
     return text_chunks
 
 # Download the Embeddings from HuggingFace 
+from langchain_huggingface import HuggingFaceEmbeddings
+
+
 def download_hugging_face_embeddings():
+
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"}
     )
+
     return embeddings
